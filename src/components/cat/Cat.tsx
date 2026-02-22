@@ -151,6 +151,32 @@ export function Cat() {
     if (state !== "idle") setDisplayEmoji(m[state] ?? "🐱");
   }, [state]);
 
+  // ── 상태 전환 시 말풍선 ──
+  const prevState = useRef(state);
+  useEffect(() => {
+    if (prevState.current === state) return;
+    const prev = prevState.current;
+    prevState.current = state;
+
+    const transitions: Record<string, string[]> = {
+      coding: ["let's code! 💻", "focus mode!", "coding time~", "⌨️ *tap tap*"],
+      sleeping: ["zzz...", "so sleepy...", "💤 good night...", "*curls up*"],
+      tired: ["it's late... 🌙", "*yawn* still coding?", "go to bed!"],
+      celebrating: ["🎉 commit!", "nice commit!", "woohoo!"],
+      idle: prev === "coding"
+        ? ["break time~", "done coding?", "*stretch*"]
+        : prev === "sleeping"
+        ? ["*wakes up* 🥱", "morning!", "I'm up!"]
+        : [],
+    };
+
+    const msgs = transitions[state];
+    if (msgs && msgs.length > 0) {
+      const msg = msgs[Math.floor(Math.random() * msgs.length)];
+      showBubble(msg, 2500);
+    }
+  }, [state, showBubble]);
+
   // ══════════════════════════════════════
   // Walk: 윈도우 자체를 이동
   // ══════════════════════════════════════

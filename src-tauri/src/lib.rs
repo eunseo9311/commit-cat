@@ -48,7 +48,11 @@ pub fn run() {
                 setup_macos_window(&window);
             }
 
-            let _ = app_handle; // suppress unused warning
+            // 활동 모니터 시작
+            let monitor_handle = app_handle.clone();
+            tauri::async_runtime::spawn(async move {
+                services::activity::start_monitor(monitor_handle).await;
+            });
 
             Ok(())
         })

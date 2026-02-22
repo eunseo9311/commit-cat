@@ -20,6 +20,10 @@ interface CatStore {
   expToNext: number;
   streakDays: number;
 
+  // Activity
+  activeIde: string | null;
+  idleSeconds: number;
+
   // Today
   todayCodingMinutes: number;
   todayCommits: number;
@@ -28,6 +32,8 @@ interface CatStore {
   // Actions
   setState: (state: string) => void;
   setLevel: (level: number, exp: number, expToNext: number) => void;
+  setActiveIde: (ide: string | null) => void;
+  setIdleSeconds: (seconds: number) => void;
   addCommit: () => void;
   addCodingMinute: () => void;
   addPomodoro: () => void;
@@ -55,6 +61,9 @@ export const useCatStore = create<CatStore>((set) => ({
   expToNext: 60,
   streakDays: 0,
 
+  activeIde: null,
+  idleSeconds: 0,
+
   todayCodingMinutes: 0,
   todayCommits: 0,
   todayPomodoros: 0,
@@ -68,6 +77,12 @@ export const useCatStore = create<CatStore>((set) => ({
 
   setLevel: (level, exp, expToNext) =>
     set({ level, exp, expToNext }),
+
+  setActiveIde: (ide) =>
+    set({ activeIde: ide }),
+
+  setIdleSeconds: (seconds) =>
+    set({ idleSeconds: seconds }),
 
   addCommit: () =>
     set((s) => ({ todayCommits: s.todayCommits + 1 })),
