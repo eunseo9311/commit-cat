@@ -7,7 +7,8 @@
 }
 
 html, body {
-  background: transparent;
+  /* 거의 투명 - 잔상 방지 (완전 투명은 WebKit 버그 유발) */
+  background: rgba(0, 0, 0, 0.001);
   overflow: hidden;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   user-select: none;
@@ -19,4 +20,6 @@ html, body {
   width: 100vw;
   height: 100vh;
   pointer-events: none;
+  /* 잔상 방지: 새로운 스태킹 컨텍스트 생성 */
+  isolation: isolate;
 }
