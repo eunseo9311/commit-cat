@@ -1,0 +1,30 @@
+[package]
+name = "commit-cat"
+version = "0.1.0"
+description = "A developer desktop pet that grows with your coding activity"
+authors = ["you"]
+license = "MIT"
+repository = ""
+edition = "2021"
+
+[lib]
+name = "commit_cat_lib"
+crate-type = ["lib", "cdylib", "staticlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = ["macos-private-api",
+    "tray-icon",
+    "image-png",
+] }
+tauri-plugin-shell = "2"
+tauri-plugin-fs = "2"
+tauri-plugin-notification = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+chrono = { version = "0.4", features = ["serde"] }
+notify = "7"           # File system watcher (for git HEAD changes)
+directories = "5"      # Cross-platform app data paths
+tokio = { version = "1", features = ["full"] }

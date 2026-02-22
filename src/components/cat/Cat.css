@@ -1,0 +1,140 @@
+/* 🐱 데스크탑 고양이 */
+.cat {
+  position: fixed;
+  width: 64px;
+  height: 64px;
+  cursor: grab;
+  z-index: 9999;
+  transition: transform 0.1s ease;
+  pointer-events: auto;
+}
+
+.cat--dragging {
+  cursor: grabbing;
+  transform: scale(1.1);
+}
+
+.cat__sprite {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.cat__emoji {
+  font-size: 48px;
+  line-height: 1;
+}
+
+/* ── 상태별 애니메이션 ── */
+
+/* Idle: 느릿느릿 */
+.cat--idle .cat__sprite {
+  animation: idle-bob 2s ease-in-out infinite;
+}
+
+@keyframes idle-bob {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+}
+
+/* Coding: 집중 떨림 */
+.cat--coding .cat__sprite {
+  animation: coding-focus 0.5s ease-in-out infinite;
+}
+
+@keyframes coding-focus {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-1px); }
+  75% { transform: translateX(1px); }
+}
+
+/* Celebrating: 점프! */
+.cat--celebrating .cat__sprite {
+  animation: celebrate-jump 0.4s ease-out 3;
+}
+
+@keyframes celebrate-jump {
+  0% { transform: translateY(0) scale(1); }
+  50% { transform: translateY(-20px) scale(1.2); }
+  100% { transform: translateY(0) scale(1); }
+}
+
+/* Sleeping: 천천히 */
+.cat--sleeping {
+  opacity: 0.7;
+}
+
+.cat__zzz {
+  position: absolute;
+  top: -10px;
+  right: -5px;
+  font-size: 12px;
+  color: #888;
+  animation: zzz-float 2s ease-in-out infinite;
+}
+
+@keyframes zzz-float {
+  0% { opacity: 0; transform: translateY(0); }
+  50% { opacity: 1; transform: translateY(-10px); }
+  100% { opacity: 0; transform: translateY(-20px); }
+}
+
+/* Celebrating particles */
+.cat__particles {
+  position: absolute;
+  top: -15px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 16px;
+  animation: particles-pop 0.5s ease-out 3;
+}
+
+@keyframes particles-pop {
+  0% { opacity: 1; transform: translateX(-50%) translateY(0) scale(0.5); }
+  100% { opacity: 0; transform: translateX(-50%) translateY(-30px) scale(1.5); }
+}
+
+/* Frustrated: 쓰러짐 */
+.cat--frustrated .cat__sprite {
+  animation: frustrated-fall 0.3s ease-in forwards;
+}
+
+@keyframes frustrated-fall {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(90deg) translateX(10px); }
+}
+
+/* 말풍선 */
+.cat__bubble {
+  position: absolute;
+  top: -40px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: white;
+  padding: 6px 12px;
+  border-radius: 12px;
+  font-size: 14px;
+  white-space: nowrap;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  animation: bubble-pop 1.5s ease-out forwards;
+}
+
+.cat__bubble::after {
+  content: "";
+  position: absolute;
+  bottom: -6px;
+  left: 50%;
+  transform: translateX(-50%);
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+  border-top: 6px solid white;
+}
+
+@keyframes bubble-pop {
+  0% { opacity: 0; transform: translateX(-50%) translateY(10px) scale(0.8); }
+  15% { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); }
+  85% { opacity: 1; }
+  100% { opacity: 0; transform: translateX(-50%) translateY(-10px); }
+}
