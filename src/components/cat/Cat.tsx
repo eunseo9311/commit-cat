@@ -1,46 +1,27 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { invoke } from "@tauri-apps/api/core";
+import { getCurrentWindow } from "@tauri-apps/api/window";
+import { LogicalPosition } from "@tauri-apps/api/dpi";
 import { useCatStore } from "../../stores/catStore";
 import "./Cat.css";
 
-// ── 랜덤 행동 타입 ──
+// ── 랜덤 행동 ──
 type IdleBehavior = "walk" | "sit" | "lick" | "lookAround" | "stretch" | "nap" | "wiggle";
 
-// ── 행동별 이모지 ──
 const behaviorEmoji: Record<IdleBehavior, string> = {
-  walk: "🐱",
-  sit: "🐱",
-  lick: "😽",
-  lookAround: "🙀",
-  stretch: "😸",
-  nap: "😴",
-  wiggle: "😼",
+  walk: "🐱", sit: "🐱", lick: "😽", lookAround: "🙀",
+  stretch: "😸", nap: "😴", wiggle: "😼",
 };
 
-// ── 행동별 지속 시간 (ms) ──
 const behaviorDuration: Record<IdleBehavior, [number, number]> = {
-  walk: [3000, 8000],
-  sit: [2000, 5000],
-  lick: [1500, 3000],
-  lookAround: [1000, 2000],
-  stretch: [1500, 2500],
-  nap: [5000, 10000],
-  wiggle: [800, 1500],
+  walk: [3000, 8000], sit: [2000, 5000], lick: [1500, 3000],
+  lookAround: [1000, 2000], stretch: [1500, 2500], nap: [5000, 10000], wiggle: [800, 1500],
 };
 
-// ── 시간대별 행동 가중치 ──
 function getBehaviorWeights(): Record<IdleBehavior, number> {
   const hour = new Date().getHours();
-  const isNight = hour >= 23 || hour < 6;
-  const isMorning = hour >= 6 && hour < 10;
-
-  if (isNight) {
-    return { walk: 1, sit: 3, lick: 1, lookAround: 1, stretch: 1, nap: 8, wiggle: 0 };
-  }
-  if (isMorning) {
-    return { walk: 3, sit: 2, lick: 2, lookAround: 2, stretch: 4, nap: 1, wiggle: 2 };
-  }
-  // 낮 (기본)
+  if (hour >= 23 || hour < 6) return { walk: 1, sit: 3, lick: 1, lookAround: 1, stretch: 1, nap: 8, wiggle: 0 };
+  if (hour >= 6 && hour < 10) return { walk: 3, sit: 2, lick: 2, lookAround: 2, stretch: 4, nap: 1, wiggle: 2 };
   return { walk: 4, sit: 3, lick: 2, lookAround: 2, stretch: 2, nap: 1, wiggle: 2 };
 }
 
@@ -49,71 +30,93 @@ function pickRandomBehavior(): IdleBehavior {
   const entries = Object.entries(weights) as [IdleBehavior, number][];
   const total = entries.reduce((sum, [, w]) => sum + w, 0);
   let rand = Math.random() * total;
-  for (const [behavior, weight] of entries) {
-    rand -= weight;
-    if (rand <= 0) return behavior;
-  }
+  for (const [b, w] of entries) { rand -= w; if (rand <= 0) return b; }
   return "walk";
 }
 
-function randomInRange(min: number, max: number): number {
-  return min + Math.random() * (max - min);
-}
+function randomInRange(min: number, max: number) { return min + Math.random() * (max - min); }
 
-// ── 클릭 메시지 (연속 클릭 시 반응 변화) ──
-const normalMessages = [
-  "meow!", "nya~", "purr...", "mrrp?",
-  "*stretch*", "code with me~", "prrrr~",
-];
-const happyMessages = [
-  "😻 love it!", "more pets!", "purrrr~", "nya nya~!",
-];
-const annoyedMessages = [
-  "...meow.", "okay okay!", "I'm busy!", "stahp!", "😾",
-];
-const autoMessages = [
-  "*yawn*", "...", "💭", "hmm...", "*tail swish*",
-  "commit something!", "☕", "*purr*",
-];
+// ── 메시지 ──
+const normalMessages = ["meow!", "nya~", "purr...", "mrrp?", "*stretch*", "code with me~", "prrrr~"];
+const happyMessages = ["😻 love it!", "more pets!", "purrrr~", "nya nya~!"];
+const annoyedMessages = ["...meow.", "okay okay!", "I'm busy!", "stahp!", "😾"];
+const autoMessages = ["*yawn*", "...", "💭", "hmm...", "*tail swish*", "commit something!", "☕", "*purr*"];
+
+// ── 윈도우 크기 ──
+const WIN_W = 120;
+const WIN_H = 100;
 
 export function Cat() {
   const { state } = useCatStore();
+  const appWindow = useRef(getCurrentWindow());
 
-  // ── 위치 & 드래그 ──
-  const [position, setPosition] = useState({ x: 100, y: 100 });
+  // ── 윈도우 위치 (화면 좌표) ──
+  const [winPos, setWinPos] = useState({ x: 300, y: 400 });
+  const winPosRef = useRef({ x: 300, y: 400 });
+
+  // ── 드래그 ──
   const [isDragging, setIsDragging] = useState(false);
   const didDrag = useRef(false);
-  const dragOffset = useRef({ x: 0, y: 0 });
+  const dragStartMouse = useRef({ x: 0, y: 0 });
+  const dragStartWin = useRef({ x: 0, y: 0 });
 
-  // ── 방향 ──
-  const [direction, setDirection] = useState<"left" | "right">("right");
-
-  // ── 현재 행동 ──
+  // ── 행동 ──
   const [behavior, setBehavior] = useState<IdleBehavior>("sit");
   const behaviorTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [direction, setDirection] = useState<"left" | "right">("right");
 
   // ── 말풍선 ──
   const [bubble, setBubble] = useState<string | null>(null);
   const [bubbleKey, setBubbleKey] = useState(0);
   const bubbleTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // ── 클릭 카운터 (연속 클릭 감지) ──
+  // ── 클릭 카운터 ──
   const clickCount = useRef(0);
   const clickResetTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // ── 현재 표시할 이모지 ──
+  // ── 이모지 ──
   const [displayEmoji, setDisplayEmoji] = useState("🐱");
 
-  // ── 말풍선 표시 헬퍼 ──
+  // ── 화면 크기 ──
+  const screenW = useRef(window.screen.width);
+  const screenH = useRef(window.screen.height);
+
+  // ══════════════════════════════════════
+  // 윈도우 위치 동기화
+  // ══════════════════════════════════════
+  const moveWindow = useCallback(async (x: number, y: number) => {
+    winPosRef.current = { x, y };
+    setWinPos({ x, y });
+    try {
+      await appWindow.current.setPosition(new LogicalPosition(Math.round(x), Math.round(y)));
+    } catch (e) {
+      // 무시 (너무 빠른 호출 시 에러 가능)
+    }
+  }, []);
+
+  // 시작 시 현재 윈도우 위치 가져오기
+  useEffect(() => {
+    (async () => {
+      try {
+        const pos = await appWindow.current.outerPosition();
+        winPosRef.current = { x: pos.x, y: pos.y };
+        setWinPos({ x: pos.x, y: pos.y });
+      } catch (e) {}
+    })();
+  }, []);
+
+  // ══════════════════════════════════════
+  // 말풍선
+  // ══════════════════════════════════════
   const showBubble = useCallback((msg: string, duration = 2000) => {
     setBubble(msg);
-    setBubbleKey((k) => k + 1);
+    setBubbleKey(k => k + 1);
     if (bubbleTimer.current) clearTimeout(bubbleTimer.current);
     bubbleTimer.current = setTimeout(() => setBubble(null), duration);
   }, []);
 
   // ══════════════════════════════════════
-  // 랜덤 행동 루프 (idle일 때만)
+  // 랜덤 행동 루프
   // ══════════════════════════════════════
   const scheduleBehavior = useCallback(() => {
     const next = pickRandomBehavior();
@@ -123,14 +126,11 @@ export function Cat() {
     setBehavior(next);
     setDisplayEmoji(behaviorEmoji[next]);
 
-    // walk일 때 랜덤 방향
     if (next === "walk") {
       setDirection(Math.random() > 0.5 ? "right" : "left");
     }
 
-    behaviorTimeout.current = setTimeout(() => {
-      scheduleBehavior();
-    }, duration);
+    behaviorTimeout.current = setTimeout(() => scheduleBehavior(), duration);
   }, []);
 
   useEffect(() => {
@@ -139,111 +139,81 @@ export function Cat() {
       return;
     }
     scheduleBehavior();
-    return () => {
-      if (behaviorTimeout.current) clearTimeout(behaviorTimeout.current);
-    };
+    return () => { if (behaviorTimeout.current) clearTimeout(behaviorTimeout.current); };
   }, [state, isDragging, scheduleBehavior]);
 
-  // ── 상태별 이모지 오버라이드 ──
+  // 상태별 이모지 오버라이드
   useEffect(() => {
-    const emojiMap: Record<string, string> = {
-      coding: "😺",
-      celebrating: "🎉",
-      frustrated: "😿",
-      sleeping: "😴",
-      tired: "🥱",
-      interaction: "😻",
+    const m: Record<string, string> = {
+      coding: "😺", celebrating: "🎉", frustrated: "😿",
+      sleeping: "😴", tired: "🥱", interaction: "😻",
     };
-    if (state !== "idle") {
-      setDisplayEmoji(emojiMap[state] ?? "🐱");
-    }
+    if (state !== "idle") setDisplayEmoji(m[state] ?? "🐱");
   }, [state]);
 
   // ══════════════════════════════════════
-  // 이동 (walk 행동일 때만) - requestAnimationFrame 사용
+  // Walk: 윈도우 자체를 이동
   // ══════════════════════════════════════
-  const positionRef = useRef(position);
-  positionRef.current = position;
-  const directionRef = useRef(direction);
-  directionRef.current = direction;
-
   useEffect(() => {
     if (state !== "idle" || behavior !== "walk" || isDragging) return;
 
-    let animationId: number;
-    let lastTime = performance.now();
-    const baseSpeed = 40; // pixels per second
+    const interval = setInterval(() => {
+      const pos = winPosRef.current;
+      const speed = 1.2 + Math.random() * 0.6;
+      let newX = pos.x + (direction === "right" ? speed : -speed);
 
-    const animate = (currentTime: number) => {
-      const deltaTime = (currentTime - lastTime) / 1000; // 초 단위
-      lastTime = currentTime;
-
-      const speed = baseSpeed * deltaTime;
-      const currentDir = directionRef.current;
-      let newX = positionRef.current.x + (currentDir === "right" ? speed : -speed);
-
-      // 경계 체크
-      if (newX > window.innerWidth - 64) {
+      // 화면 경계 체크
+      const maxX = screenW.current - WIN_W;
+      if (newX > maxX) {
         setDirection("left");
-        newX = window.innerWidth - 64;
+        newX = maxX;
       } else if (newX < 0) {
         setDirection("right");
         newX = 0;
       }
 
-      setPosition((prev) => ({ ...prev, x: newX }));
-      animationId = requestAnimationFrame(animate);
-    };
+      moveWindow(newX, pos.y);
+    }, 30);
 
-    animationId = requestAnimationFrame(animate);
-    return () => cancelAnimationFrame(animationId);
-  }, [state, behavior, isDragging]);
+    return () => clearInterval(interval);
+  }, [state, behavior, direction, isDragging, moveWindow]);
 
   // ══════════════════════════════════════
-  // 자동 말풍선 (가끔 혼잣말)
+  // 자동 혼잣말
   // ══════════════════════════════════════
-  const bubbleRef = useRef(bubble);
-  bubbleRef.current = bubble;
-
   useEffect(() => {
     const interval = setInterval(() => {
-      if (state !== "idle" || isDragging || bubbleRef.current) return;
-      // 15% 확률로 혼잣말
+      if (state !== "idle" || isDragging || bubble) return;
       if (Math.random() < 0.15) {
         const msg = autoMessages[Math.floor(Math.random() * autoMessages.length)];
         showBubble(msg, 2500);
       }
     }, 8000);
-
     return () => clearInterval(interval);
-  }, [state, isDragging, showBubble]);
+  }, [state, isDragging, bubble, showBubble]);
 
   // ══════════════════════════════════════
-  // 드래그 핸들러
+  // 드래그: 윈도우 자체를 이동
   // ══════════════════════════════════════
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
     setIsDragging(true);
     didDrag.current = false;
-    dragOffset.current = {
-      x: e.clientX - position.x,
-      y: e.clientY - position.y,
-    };
-  }, [position]);
+    dragStartMouse.current = { x: e.screenX, y: e.screenY };
+    dragStartWin.current = { ...winPosRef.current };
+  }, []);
 
   useEffect(() => {
     if (!isDragging) return;
 
     const handleMove = (e: MouseEvent) => {
       didDrag.current = true;
-      setPosition({
-        x: e.clientX - dragOffset.current.x,
-        y: e.clientY - dragOffset.current.y,
-      });
+      const dx = e.screenX - dragStartMouse.current.x;
+      const dy = e.screenY - dragStartMouse.current.y;
+      moveWindow(dragStartWin.current.x + dx, dragStartWin.current.y + dy);
     };
 
     const handleUp = () => {
       setIsDragging(false);
-      // 드래그 놓을 때 반응
       if (didDrag.current) {
         showBubble("wheee~!", 1500);
       }
@@ -255,30 +225,21 @@ export function Cat() {
       window.removeEventListener("mousemove", handleMove);
       window.removeEventListener("mouseup", handleUp);
     };
-  }, [isDragging, showBubble]);
+  }, [isDragging, moveWindow, showBubble]);
 
   // ══════════════════════════════════════
-  // 클릭 반응 (연속 클릭 감지)
+  // 클릭 반응
   // ══════════════════════════════════════
   const handleClick = async () => {
     if (didDrag.current) return;
-
-    try {
-      await invoke<string>("click_cat");
-    } catch (e) {
-      console.error(e);
-    }
+    try { await invoke<string>("click_cat"); } catch (e) { console.error(e); }
 
     clickCount.current += 1;
     const count = clickCount.current;
 
-    // 연속 클릭 리셋 타이머
     if (clickResetTimer.current) clearTimeout(clickResetTimer.current);
-    clickResetTimer.current = setTimeout(() => {
-      clickCount.current = 0;
-    }, 3000);
+    clickResetTimer.current = setTimeout(() => { clickCount.current = 0; }, 3000);
 
-    // 클릭 횟수에 따른 반응
     let msg: string;
     if (count <= 2) {
       msg = normalMessages[Math.floor(Math.random() * normalMessages.length)];
@@ -290,14 +251,10 @@ export function Cat() {
       msg = annoyedMessages[Math.floor(Math.random() * annoyedMessages.length)];
       setDisplayEmoji("😾");
     }
-
     showBubble(msg);
 
-    // 표정 복구
     setTimeout(() => {
-      if (state === "idle") {
-        setDisplayEmoji(behaviorEmoji[behavior]);
-      }
+      if (state === "idle") setDisplayEmoji(behaviorEmoji[behavior]);
     }, 2000);
   };
 
@@ -307,36 +264,33 @@ export function Cat() {
   const isFlipped = direction === "left";
 
   return (
-    <div
-      className={`cat cat--${state} cat--${behavior} ${isDragging ? "cat--dragging" : ""}`}
-      style={{
-        transform: `translate3d(${position.x}px, ${position.y}px, 0)`,
-      }}
-      onMouseDown={handleMouseDown}
-      onClick={handleClick}
-    >
-      <div
-        className="cat__sprite"
-        style={{ transform: isFlipped ? "scaleX(-1)" : "scaleX(1)" }}
-      >
-        <span className="cat__emoji">{displayEmoji}</span>
+    <div className="cat-window">
+      {/* 말풍선 (상단) */}
+      <div className="bubble-area">
+        {bubble && (
+          <div className="cat__bubble" key={bubbleKey}>
+            {bubble}
+          </div>
+        )}
       </div>
 
-      {/* 행동별 이펙트 */}
-      {behavior === "nap" && state === "idle" && (
-        <div className="cat__zzz">z z z</div>
-      )}
-      {behavior === "lick" && state === "idle" && (
-        <div className="cat__effect">✨</div>
-      )}
-      {state === "celebrating" && <div className="cat__particles">✨🎉✨</div>}
-
-      {/* 말풍선 */}
-      {bubble && (
-        <div className="cat__bubble" key={bubbleKey}>
-          {bubble}
+      {/* 고양이 (하단) */}
+      <div
+        className={`cat cat--${state} cat--${behavior} ${isDragging ? "cat--dragging" : ""}`}
+        onMouseDown={handleMouseDown}
+        onClick={handleClick}
+      >
+        <div
+          className="cat__sprite"
+          style={{ transform: isFlipped ? "scaleX(-1)" : "scaleX(1)" }}
+        >
+          <span className="cat__emoji">{displayEmoji}</span>
         </div>
-      )}
+
+        {behavior === "nap" && state === "idle" && <div className="cat__zzz">z z z</div>}
+        {behavior === "lick" && state === "idle" && <div className="cat__effect">✨</div>}
+        {state === "celebrating" && <div className="cat__particles">✨🎉✨</div>}
+      </div>
     </div>
   );
 }

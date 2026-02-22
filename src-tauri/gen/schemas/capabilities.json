@@ -1,1 +1,1 @@
-{}
+{"default":{"identifier":"default","description":"Commit Cat default capabilities","local":true,"windows":["cat-overlay"],"permissions":["core:default","core:window:default","core:window:allow-set-position","core:window:allow-outer-position","core:window:allow-set-size","core:window:allow-set-focus","core:window:allow-show","core:window:allow-hide","core:window:allow-set-always-on-top","core:window:allow-set-ignore-cursor-events","core:window:allow-start-dragging","shell:default","fs:default","notification:default"]}}

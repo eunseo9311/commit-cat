@@ -1,22 +1,39 @@
-/* 🐱 Commit Cat - Level 1.5 Animations */
+/* 🐱 Commit Cat - Window-based movement */
 
+/* ── 윈도우 레이아웃 ── */
+.cat-window {
+  width: 120px;
+  height: 100px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  background: transparent;
+  overflow: visible;
+}
+
+/* 말풍선 영역 (상단) */
+.bubble-area {
+  flex: 0 0 auto;
+  height: 30px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  position: relative;
+  width: 100%;
+  pointer-events: none;
+}
+
+/* ── 고양이 본체 ── */
 .cat {
-  position: fixed;
-  left: 0;
-  top: 0;
   width: 64px;
   height: 64px;
   cursor: grab;
-  z-index: 9999;
-  pointer-events: auto;
-  /* GPU 가속 및 잔상 방지 */
-  will-change: transform;
-  -webkit-backface-visibility: hidden;
-  backface-visibility: hidden;
-  transform-style: preserve-3d;
-  /* macOS 투명 창 렌더링 최적화 */
-  -webkit-transform-style: preserve-3d;
-  perspective: 1000px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  -webkit-app-region: no-drag;
 }
 
 .cat--dragging {
@@ -29,68 +46,58 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  /* 방향 전환만 부드럽게 (이동 시 잔상 방지를 위해 transition 최소화) */
-  transition: transform 0.15s ease-out;
+  transition: transform 0.3s ease;
 }
 
 .cat__emoji {
   font-size: 48px;
   line-height: 1;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.15));
 }
 
 /* ══════════════════════════════════════
-   행동별 애니메이션 (idle 상태)
+   행동별 애니메이션 (idle)
    ══════════════════════════════════════ */
 
-/* Walk: 통통 걷기 */
 .cat--idle.cat--walk .cat__emoji {
   animation: walk-bounce 0.4s ease-in-out infinite;
 }
-
 @keyframes walk-bounce {
   0%, 100% { transform: translateY(0) rotate(0deg); }
   25% { transform: translateY(-3px) rotate(-2deg); }
   75% { transform: translateY(-3px) rotate(2deg); }
 }
 
-/* Sit: 가만히 앉아서 살짝 움직임 */
 .cat--idle.cat--sit .cat__emoji {
   animation: sit-idle 3s ease-in-out infinite;
 }
-
 @keyframes sit-idle {
   0%, 100% { transform: translateY(0); }
   30% { transform: translateY(-2px); }
   60% { transform: translateY(0) rotate(3deg); }
 }
 
-/* Lick: 세수 */
 .cat--idle.cat--lick .cat__emoji {
   animation: lick-clean 0.6s ease-in-out infinite;
 }
-
 @keyframes lick-clean {
   0%, 100% { transform: rotate(0deg); }
   25% { transform: rotate(-10deg) translateY(-2px); }
   75% { transform: rotate(10deg) translateY(-2px); }
 }
 
-/* LookAround: 두리번 */
 .cat--idle.cat--lookAround .cat__emoji {
   animation: look-around 1.2s ease-in-out infinite;
 }
-
 @keyframes look-around {
   0%, 100% { transform: translateX(0) scale(1); }
   25% { transform: translateX(-5px) scale(1.05); }
   75% { transform: translateX(5px) scale(1.05); }
 }
 
-/* Stretch: 기지개 */
 .cat--idle.cat--stretch .cat__emoji {
   animation: stretch-cat 1.5s ease-in-out;
 }
-
 @keyframes stretch-cat {
   0% { transform: scaleX(1) scaleY(1); }
   30% { transform: scaleX(1.3) scaleY(0.7); }
@@ -98,22 +105,17 @@
   100% { transform: scaleX(1) scaleY(1); }
 }
 
-/* Nap: 졸기 */
 .cat--idle.cat--nap .cat__emoji {
   animation: nap-breathe 2.5s ease-in-out infinite;
-  opacity: 0.8;
 }
-
 @keyframes nap-breathe {
   0%, 100% { transform: scale(1) translateY(0); }
   50% { transform: scale(1.05) translateY(1px); }
 }
 
-/* Wiggle: 꼬리 흔들기 */
 .cat--idle.cat--wiggle .cat__emoji {
   animation: wiggle-butt 0.3s ease-in-out infinite;
 }
-
 @keyframes wiggle-butt {
   0%, 100% { transform: rotate(0deg); }
   25% { transform: rotate(-5deg); }
@@ -121,25 +123,21 @@
 }
 
 /* ══════════════════════════════════════
-   상태별 애니메이션 (비 idle)
+   상태별 애니메이션
    ══════════════════════════════════════ */
 
-/* Coding: 집중 */
 .cat--coding .cat__emoji {
   animation: coding-focus 0.5s ease-in-out infinite;
 }
-
 @keyframes coding-focus {
   0%, 100% { transform: translateX(0); }
   25% { transform: translateX(-1px); }
   75% { transform: translateX(1px); }
 }
 
-/* Celebrating: 점프! */
 .cat--celebrating .cat__emoji {
   animation: celebrate-jump 0.4s ease-out 3;
 }
-
 @keyframes celebrate-jump {
   0% { transform: translateY(0) scale(1) rotate(0deg); }
   30% { transform: translateY(-25px) scale(1.2) rotate(-5deg); }
@@ -147,48 +145,41 @@
   100% { transform: translateY(0) scale(1) rotate(0deg); }
 }
 
-/* Frustrated: 쓰러짐 */
 .cat--frustrated .cat__emoji {
   animation: frustrated-fall 0.5s ease-in forwards;
 }
-
 @keyframes frustrated-fall {
   0% { transform: rotate(0deg) translateY(0); }
   50% { transform: rotate(45deg) translateY(5px); }
   100% { transform: rotate(90deg) translateY(10px); }
 }
 
-/* Sleeping */
 .cat--sleeping .cat__emoji {
   animation: nap-breathe 2.5s ease-in-out infinite;
-  opacity: 0.7;
 }
 
-/* Dragging: 들려간 느낌 */
 .cat--dragging .cat__emoji {
   animation: dragged 0.2s ease-out forwards;
 }
-
 @keyframes dragged {
   0% { transform: scale(1); }
   100% { transform: scale(1.15) rotate(-3deg); }
 }
 
 /* ══════════════════════════════════════
-   이펙트 요소들
+   이펙트
    ══════════════════════════════════════ */
 
 .cat__zzz {
   position: absolute;
-  top: -12px;
-  right: -8px;
+  top: 0px;
+  right: -4px;
   font-size: 11px;
   color: #999;
   font-weight: bold;
   animation: zzz-float 2.5s ease-in-out infinite;
   pointer-events: none;
 }
-
 @keyframes zzz-float {
   0% { opacity: 0; transform: translateY(0) scale(0.8); }
   50% { opacity: 1; transform: translateY(-12px) scale(1); }
@@ -197,22 +188,20 @@
 
 .cat__effect {
   position: absolute;
-  top: -8px;
-  right: -8px;
+  top: 2px;
+  right: -4px;
   font-size: 10px;
   animation: effect-sparkle 0.8s ease-in-out infinite;
   pointer-events: none;
 }
-
 @keyframes effect-sparkle {
   0%, 100% { opacity: 0.3; transform: scale(0.8); }
   50% { opacity: 1; transform: scale(1.2); }
 }
 
-/* Celebrating particles */
 .cat__particles {
   position: absolute;
-  top: -18px;
+  top: -10px;
   left: 50%;
   transform: translateX(-50%);
   font-size: 14px;
@@ -220,7 +209,6 @@
   pointer-events: none;
   white-space: nowrap;
 }
-
 @keyframes particles-pop {
   0% { opacity: 1; transform: translateX(-50%) translateY(0) scale(0.5); }
   100% { opacity: 0; transform: translateX(-50%) translateY(-35px) scale(1.5); }
@@ -231,10 +219,6 @@
    ══════════════════════════════════════ */
 
 .cat__bubble {
-  position: absolute;
-  bottom: 100%;
-  left: 50%;
-  transform: translateX(-50%);
   background: white;
   color: #333;
   font-size: 13px;
@@ -246,7 +230,7 @@
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.12);
   animation: bubble-pop 0.25s ease-out, bubble-fade 0.4s ease-in 1.6s forwards;
   pointer-events: none;
-  margin-bottom: 8px;
+  position: relative;
 }
 
 .cat__bubble::after {
@@ -260,8 +244,8 @@
 }
 
 @keyframes bubble-pop {
-  0% { opacity: 0; transform: translateX(-50%) translateY(6px) scale(0.8); }
-  100% { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); }
+  0% { opacity: 0; transform: translateY(6px) scale(0.8); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
 }
 
 @keyframes bubble-fade {

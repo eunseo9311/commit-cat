@@ -4,7 +4,29 @@ mod models;
 mod services;
 mod utils;
 
-use tauri::{Emitter, Manager};
+use tauri::Manager;
+
+#[cfg(target_os = "macos")]
+use cocoa::appkit::{NSColor, NSWindow};
+#[cfg(target_os = "macos")]
+use cocoa::base::{id, nil, NO};
+
+#[cfg(target_os = "macos")]
+fn setup_macos_window(window: &tauri::WebviewWindow) {
+    use tauri::Emitter;
+
+    if let Ok(ns_window) = window.ns_window() {
+        unsafe {
+            let ns_win = ns_window as id;
+            // 윈도우를 불투명하지 않게 설정
+            ns_win.setOpaque_(NO);
+            // 배경색을 완전 투명으로 설정
+            ns_win.setBackgroundColor_(NSColor::clearColor(nil));
+            // 그림자 비활성화 (잔상 방지)
+            ns_win.setHasShadow_(NO);
+        }
+    }
+}
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -20,16 +42,12 @@ pub fn run() {
             // Initialize local data storage
             services::storage::init(&app_handle)?;
 
-            // Start background services (MVP: disabled for now)
-            // TODO: Enable background services with proper async runtime
-            // let handle = app_handle.clone();
-            // tauri::async_runtime::spawn(async move {
-            //     services::activity::start_monitor(handle).await;
-            // });
-            // let handle = app_handle.clone();
-            // tauri::async_runtime::spawn(async move {
-            //     services::git::start_watcher(handle).await;
-            // });
+            // macOS 투명 윈도우 설정
+            #[cfg(target_os = "macos")]
+            if let Some(window) = app.get_webview_window("cat-overlay") {
+                setup_macos_window(&window);
+            }
+
             let _ = app_handle; // suppress unused warning
 
             Ok(())
